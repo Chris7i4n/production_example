@@ -1,0 +1,40 @@
+version: '3'
+services:
+  postgres_db:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    networks:
+      - internal_network
+    restart: always
+  web:
+    build:
+      context: .
+    command: bundle exec puma -C config/puma.rb
+    volumes:
+      - .:/rails
+    depends_on:
+      - postgres_db
+    networks:
+      - internal_network
+    restart: always
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    ports:
+      - '80:80'
+    volumes:
+      - ./tmp/sockets:/tmp/sockets
+      - ./log:/var/www/rails/log
+    networks:
+      - internal_network
+    depends_on:
+      - web
+    restart: always
+networks:
+  internal_network:
